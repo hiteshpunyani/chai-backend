@@ -1,5 +1,7 @@
+//Basically we had created this wrapper class as we need to use promises or try catch block in many instances.
+//So not to repeat the code again and again we will use this wrapper class instead.
 const asyncHandler = (requestHandler) => {
-  (req, res, next) => {
+  return (req, res, next) => {
     Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
   };
 };
