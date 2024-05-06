@@ -180,8 +180,54 @@ const logoutUser=asyncHandler(async(req,res)=>{
   
 })
 
+const refreshAccessToken=asyncHandler(async(req,res)=>{
+  const incomingrefreshToken=req.cookies.refreshToken || req.body.refreshToken;
+
+  if(!incomingrefreshToken){
+    throw new ApiError(401,"Unauthorized request");
+  }
+
+  try {
+    const decodedToken=jwt.verify(incomingrefreshToken,process.env.REFRESH_TOKEN_SECRET);
+
+  const user=await User.findById(decodedToken?._id);
+
+  if(!user){
+    throw new ApiError(401,"Invalid refresh Token");
+  }
+
+  if(incomingrefreshToken !== user?.refreshToken){
+    throw new ApiError(401,"Refresh Token is expired or used");
+  }
+
+  const options={
+    httpOnly:true,
+    secure:true
+  }
+  
+  const {accessToken,newRefreshToken}=await generateAccessAndRefreshToken(user?._id);
+
+  return res
+  .status(200)
+  .cookie("accessToken",accessToken,options)
+  .cookie("refreshToken",newRefreshToken,options)
+  .json(
+    new ApiResponse(
+      200,
+      {accessToken,refreshToken:newRefreshToken},
+      "Access Token is refreshed"
+      )
+  )
+  } catch (error) {
+    throw new ApiError(401,error?.message || "Invalid Refresh Token");
+  }
+
+})
+
 export { 
   registerUser, 
   loginUser,
-  logoutUser
+  logoutUser,
+  refreshAccessToken
+
 };
