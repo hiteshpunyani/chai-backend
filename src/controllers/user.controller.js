@@ -400,6 +400,56 @@ const getUserChannelProfile=asyncHandler(async(req,res)=>{
   .json(new ApiResponse(200,channel[0],"User Channel fetched successfully"))
 })
 
+const getWatchHistory= asyncHandler(async(req,res)=>{
+    const user=await User.aggregate([
+      {
+        $match:{
+          // _id:req.user._id  this is wrong as the code inside the aggregation pipeline goes straight to the database.It does not handle by mongoose.
+          //Otherwise mongoose has the capability to turn the string into mongodb objectId.
+          _id:new mongoose.Types.ObjectId(req.user._id)
+        }
+      },
+      {
+        $lookup:{
+          from:"videos",
+          localField:"watchHistory",
+          foriegnField:"_id",
+          as:"watchHistory",
+          pipeline:[
+            {
+              $lookup:{
+                  from:"users",
+                  localField:"owner",
+                  foriegnField:"_id",
+                  as:"owner",
+                  pipeline:[
+                    {
+                      $project:{
+                        fullName:1,
+                        userName:1,
+                        avatar:1,
+                      }
+                    }
+                  ]
+              }
+            },
+            {
+              $addFields:{
+                owner:{
+                  $first:"$owner"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,user[0].watchHistory,"Watch History fetched successfully!!"))
+})
+
 export { 
   registerUser, 
   loginUser,
@@ -410,5 +460,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUsercoverImage,
-  getUserChannelProfile
+  getUserChannelProfile,
+  getWatchHistory
 };
